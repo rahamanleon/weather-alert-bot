@@ -434,11 +434,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/weather-alert-bot/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/yourusername/weather-alert-bot/discussions)
-- **Email**: support@example.com
+- **Email**: rahamanleon16@gmail.com
 
 ---
 
 <div align="center">
-  <p>Built with ❤️ by <a href="https://github.com/yourusername">Rahman Leon</a></p>
+  <p>Built with ❤️ by <a href="https://github.com/rahamanleon">Rahman Leon</a></p>
   <p>If you find this project useful, please give it a ⭐ on GitHub!</p>
 </div>
