@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Alert Bot - Sci-Fi Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #121826;
+            --bg-tertiary: #1a1f2e;
+            --accent-cyan: #00f3ff;
+            --accent-amber: #ffb347;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --text-primary: #e0e0ff;
+            --text-secondary: #a0a0c0;
+            --border-color: #2a2f3e;
+            --glow-cyan: 0 0 10px rgba(0, 243, 255, 0.5);
+            --glow-amber: 0 0 10px rgba(255, 179, 71, 0.5);
+            --glow-red: 0 0 10px rgba(255, 71, 87, 0.5);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* Scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(18, 24, 38, 0) 50%,
+                rgba(0, 243, 255, 0.02) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        
+        /* Animated rain particles */
+        #rain-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo h1 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.8rem;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-amber));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: var(--glow-cyan);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-whatsapp {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background-color: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-whatsapp:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        .nav-whatsapp.connected {
+            background-color: rgba(46, 213, 115, 0.15);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .nav-whatsapp.connecting {
+            background-color: rgba(255, 179, 71, 0.15);
+            border-color: var(--accent-amber);
+            color: var(--accent-amber);
+        }
+
+        .nav-whatsapp.disconnected {
+            background-color: rgba(255, 71, 87, 0.15);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-led.offline {
+            background-color: var(--accent-red);
+            box-shadow: 0 0 10px var(--accent-red);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .uptime {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow-cyan);
+            border-color: var(--accent-cyan);
+        }
+        
+        .stat-card.pulse {
+            animation: cardPulse 2s infinite;
+        }
+        
+        @keyframes cardPulse {
+            0%, 100% { box-shadow: 0 0 0 rgba(0, 243, 255, 0); }
+            50% { box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+        }
+        
+        .stat-unit {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-left: 5px;
+        }
+        
+        /* Main Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Panel Styles */
+        .panel {
+            background: linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary));
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            position: relative;
+        }
+        
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-cyan), transparent);
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .panel-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            color: var(--accent-amber);
+        }
+        
+        /* Subscriptions Table */
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: 12px 15px;
+            background-color: rgba(0, 243, 255, 0.1);
+            color: var(--accent-cyan);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table tr:hover {
+            background-color: rgba(0, 243, 255, 0.05);
+        }
+        
+        .user-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .user-status.active {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 5px var(--accent-green);
+        }
+        
+        .user-status.inactive {
+            background-color: var(--accent-red);
+            box-shadow: 0 0 5px var(--accent-red);
+        }
+        
+        /* Alert Log */
+        .alert-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .alert-entry {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: rgba(26, 31, 46, 0.5);
+            border-left: 4px solid var(--border-color);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .alert-entry:hover {
+            background-color: rgba(26, 31, 46, 0.8);
+            transform: translateX(5px);
+        }
+        
+        .alert-entry.early {
+            border-left-color: var(--accent-amber);
+        }
+        
+        .alert-entry.final {
+            border-left-color: var(--accent-red);
+        }
+        
+        .alert-entry.clear {
+            border-left-color: var(--accent-green);
+        }
+        
+        .alert-time {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+        
+        .alert-message {
+            font-size: 0.95rem;
+        }
+        
+        /* Provider Grid */
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .provider-tile {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .provider-tile.healthy {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 10px rgba(46, 213, 115, 0.2);
+        }
+        
+        .provider-tile.unhealthy {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.2);
+        }
+        
+        .provider-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .provider-status {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .provider-status.healthy {
+            color: var(--accent-green);
+        }
+        
+        .provider-status.unhealthy {
+            color: var(--accent-red);
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: var(--accent-amber);
+            text-decoration: underline;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 243, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-cyan);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Utility Classes */
+        .text-cyan { color: var(--accent-cyan); }
+        .text-amber { color: var(--accent-amber); }
+        .text-green { color: var(--accent-green); }
+        .text-red { color: var(--accent-red); }
+        
+        .mb-20 { margin-bottom: 20px; }
+        .mt-20 { margin-top: 20px; }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-amber);
+        }
+    </style>
+</head>
+<body>
+    <!-- Rain Particles Canvas -->
+    <canvas id="rain-canvas"></canvas>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="status-led" id="system-status-led"></div>
+                <h1>WEATHER ALERT BOT</h1>
+            </div>
+            <div class="status-indicator">
+                <a href="/auth" class="nav-whatsapp" id="whatsapp-status-link" style="display: none;">
+                    <span class="status-dot" id="whatsapp-status-dot"></span>
+                    <span id="whatsapp-status-text">WhatsApp</span>
+                </a>
+                <div class="uptime">
+                    Uptime: <span id="uptime">00:00:00</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Live Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card" id="stat-users">
+                <div class="stat-label">Total Users</div>
+                <div class="stat-value">0</div>
+            </div>
+            <div class="stat-card" id="stat-alerts">
+                <div class="stat-label">Alerts Today</div>
+                <div class="stat-value">0</div>
+            </div>
+            <div class="stat-card" id="stat-api-calls">
+                <div class="stat-label">API Calls Left</div>
+                <div class="stat-value">500</div>
+                <span class="stat-unit">/day</span>
+            </div>
+            <div class="stat-card" id="stat-cache">
+                <div class="stat-label">Cache Hit Rate</div>
+                <div class="stat-value">0</div>
+                <span class="stat-unit">%</span>
+            </div>
+        </div>
+        
+        <!-- Main Content Grid -->
+        <div class="content-grid">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Subscriptions Panel -->
+                <div class="panel mb-20">
+                    <div class="panel-header">
+                        <h2 class="panel-title">ACTIVE SUBSCRIPTIONS</h2>
+                        <button class="btn-refresh" onclick="loadSubscriptions()">
+                            <span class="spinner" id="subscriptions-spinner" style="display: none;"></span>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="subscriptions-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Location</th>
+                                    <th>Threshold</th>
+                                    <th>Last Alert</th>
+                                    <th>Next Check</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscriptions-body">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Forecast Charts -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">72H RAIN PROBABILITY</h2>
+                        <select id="user-select" onchange="loadUserForecast()">
+                            <option value="">Select User</option>
+                        </select>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="forecast-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Alert Log Panel -->
+                <div class="panel mb-20">
+                    <div class="panel-header">
+                        <h2 class="panel-title">ALERT LOG</h2>
+                        <button class="btn-refresh" onclick="loadAlertLog()">
+                            <span class="spinner" id="logs-spinner" style="display: none;"></span>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="alert-log" id="alert-log">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Provider Health Panel -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">PROVIDER HEALTH</h2>
+                        <button class="btn-refresh" onclick="loadProviderHealth()">
+                            <span class="spinner" id="providers-spinner" style="display: none;"></span>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="provider-grid" id="provider-grid">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                <strong>Weather Alert Bot</strong> |
+                Author: <a href="https://github.com/rahmanleon" target="_blank">Rahman Leon</a> |
+                Version: 1.0.0 |
+                <a href="https://github.com/rahmanleon/weather-alert-bot" target="_blank">GitHub</a>
+            </p>
+            <p class="mt-20">
+                Built with Node.js 20 + TypeScript 5 | Deployable on Render.com Free Tier
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="dashboard.js"></script>
+</body>
+</html>
