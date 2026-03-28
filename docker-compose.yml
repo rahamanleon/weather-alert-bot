@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  weather-alert-bot:
+    build: .
+    container_name: weather-alert-bot
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - WEATHERAPI_API_KEY=${WEATHERAPI_API_KEY}
+    volumes:
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {if(r.statusCode !== 200) throw new Error()})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - weather-network
+
+  # Optional: MongoDB for persistent storage (if enabled in config)
+  mongodb:
+    image: mongo:7
+    container_name: weather-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - weather-network
+    restart: unless-stopped
+
+networks:
+  weather-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:

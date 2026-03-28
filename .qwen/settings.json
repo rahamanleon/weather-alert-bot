@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npm start)",
+      "Bash(taskkill *)",
+      "Bash(timeout *)",
+      "Bash(node *)",
+      "Bash(npm *)"
+    ]
+  },
+  "$version": 3
+}

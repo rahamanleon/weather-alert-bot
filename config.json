@@ -1,0 +1,68 @@
+{
+  "app": {
+    "port": 3000,
+    "logLevel": "info",
+    "timezone": "UTC",
+    "schedulerIntervalMinutes": 10
+  },
+  "apis": {
+    "openWeather": {
+      "apiKey": "67383a148b1ccd2d705b474ca580d2e1",
+      "enabled": true
+    },
+    "weatherApi": {
+      "apiKey": "5eab470dc6744c64b43213909262703",
+      "enabled": true
+    },
+    "openMeteo": {
+      "enabled": true
+    }
+  },
+  "whatsapp": {
+    "sessionPath": "./sessions",
+    "messageRateLimitMs": 1000
+  },
+  "alerts": {
+    "defaultRainThresholdPct": 60,
+    "defaultEarlyCooldownMinutes": 120,
+    "defaultFinalCooldownMinutes": 60
+  },
+  "cache": {
+    "forecastTtlMinutes": 15,
+    "maxEntries": 100
+  },
+  "database": {
+    "mongoUri": "mongodb+srv://username:password@cluster.mongodb.net/weather-alert-bot",
+    "useInMemoryFallback": false
+  },
+  "users": [
+    {
+      "id": "user_001",
+      "whatsappNumber": "+8801723153138",
+      "location": {
+        "lat": 25.322903,
+        "lon": 89.203596,
+        "city": "Dinajpur",
+        "country": "BD"
+      },
+      "rainThresholdPct": 65,
+      "earlyCooldownMinutes": 120,
+      "finalCooldownMinutes": 60,
+      "active": true
+    },
+    {
+      "id": "user_002",
+      "whatsappNumber": "+60198765432",
+      "location": {
+        "lat": 1.3521,
+        "lon": 103.8198,
+        "city": "Singapore",
+        "country": "SG"
+      },
+      "rainThresholdPct": 70,
+      "earlyCooldownMinutes": 180,
+      "finalCooldownMinutes": 90,
+      "active": false
+    }
+  ]
+}
